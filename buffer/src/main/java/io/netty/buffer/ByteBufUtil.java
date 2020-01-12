@@ -52,7 +52,7 @@ import static io.netty.util.internal.StringUtil.isSurrogate;
  * A collection of utility methods that is related with handling {@link ByteBuf},
  * such as the generation of hex dump and swapping an integer's byte order.
  */
-public final class ByteBufUtil {
+public final class ByteBufUtil {//
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ByteBufUtil.class);
     private static final FastThreadLocal<byte[]> BYTE_ARRAYS = new FastThreadLocal<byte[]>() {

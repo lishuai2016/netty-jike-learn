@@ -21,6 +21,8 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannel;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.PortUnreachableException;
@@ -32,7 +34,9 @@ import java.util.List;
 /**
  * {@link AbstractNioChannel} base class for {@link Channel}s that operate on messages.
  */
-public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
+public abstract class AbstractNioMessageChannel extends AbstractNioChannel {//消息处理channel的抽象
+    private static final InternalLogger logger =
+            InternalLoggerFactory.getInstance(AbstractNioMessageChannel.class);
     boolean inputShutdown;
 
     /**
@@ -43,7 +47,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
     }
 
     @Override
-    protected AbstractNioUnsafe newUnsafe() {
+    protected AbstractNioUnsafe newUnsafe() {//server端的Unsafe实现
         return new NioMessageUnsafe();
     }
 
@@ -71,8 +75,8 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             Throwable exception = null;
             try {
                 try {
-                    do {
-                        int localRead = doReadMessages(readBuf);
+                    do { logger.info("[ls] doReadMessages 调用jdk的accept()方法，新建立一条连接");
+                        int localRead = doReadMessages(readBuf);//调用jdk的accept()方法，新建立一条连接
                         if (localRead == 0) {
                             break;
                         }

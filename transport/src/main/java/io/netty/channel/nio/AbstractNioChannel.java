@@ -36,13 +36,13 @@ import java.util.concurrent.TimeUnit;
  * Abstract base class for {@link Channel} implementations which use a Selector based approach.
  */
 public abstract class AbstractNioChannel extends AbstractChannel {
-
+    //基于select模型的nio channel抽象.NioSocketChannel和NioServerSocketChannel均是继承该类。实质该类是jdk原生channel的代理
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(AbstractNioChannel.class);
 
-    private final SelectableChannel ch;
-    protected final int readInterestOp;
-    volatile SelectionKey selectionKey;
+    private final SelectableChannel ch;//jdk的原生channel
+    protected final int readInterestOp;//感兴趣事件操作码
+    volatile SelectionKey selectionKey;//感兴趣的key
     boolean readPending;
     private final Runnable clearReadPendingRunnable = new Runnable() {
         @Override
@@ -68,8 +68,9 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      */
     protected AbstractNioChannel(Channel parent, SelectableChannel ch, int readInterestOp) {
         super(parent);
-        this.ch = ch;
-        this.readInterestOp = readInterestOp;
+        logger.info("[ls] 创建channel执行感兴趣的事件，readInterestOp:{}",readInterestOp);
+        this.ch = ch;//设置原生channel
+        this.readInterestOp = readInterestOp;//设置事件类型。NioServerSocketChannel设置的是ACCEPT，NioSocketChannel设置的是OP_READ
         try {
             //非阻塞模式
             ch.configureBlocking(false);
@@ -180,6 +181,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     /**
      * Special {@link Unsafe} sub-type which allows to access the underlying {@link SelectableChannel}
+     * 提供了一个子类型可以访问SelectableChannel。增加了可以访问底层jdk的SelectableChannel的功能，
+     * 定义了从SelectableChannel读取数据的read方法
      */
     public interface NioUnsafe extends Unsafe {
         /**
@@ -195,12 +198,12 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         /**
          * Read from underlying {@link SelectableChannel}
          */
-        void read();
+        void read();//这里有两个实现，NioByteUnsafe和NioMessageUnsafe
 
         void forceFlush();
     }
 
-    protected abstract class AbstractNioUnsafe extends AbstractUnsafe implements NioUnsafe {
+    protected abstract class AbstractNioUnsafe extends AbstractUnsafe implements NioUnsafe {//内部类
 
         protected final void removeReadOp() {
             SelectionKey key = selectionKey();
@@ -236,9 +239,11 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                 }
 
                 boolean wasActive = isActive();
-                if (doConnect(remoteAddress, localAddress)) {
+                if (doConnect(remoteAddress, localAddress)) {//建立链接成功
+                    logger.info("[ls] 建立链接成功");
                     fulfillConnectPromise(promise, wasActive);
                 } else {
+                    logger.info("[ls] 建立链接失败");
                     connectPromise = promise;
                     requestedRemoteAddress = remoteAddress;
 
@@ -364,12 +369,12 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doRegister() throws Exception {
+    protected void doRegister() throws Exception {//最终注册channel到select上在这里完成
         boolean selected = false;
         for (;;) {
-            try {
-                logger.info("initial register： " + 0);
-                selectionKey = javaChannel().register(eventLoop().unwrappedSelector(), 0, this);
+            try {//第一次Register 并不是监听OP_ACCEPT，而是0.最终监听OP_ACCEPT 是通过bind 完成后的fireChannelActive() 来触发的
+                logger.info("注册完成Selector。doRegister initial register： " + 0);
+                selectionKey = javaChannel().register(eventLoop().unwrappedSelector(), 0, this);//同时还把自己（NioServerSocketChannel）作为attach 绑定了该 selectKey 上
                 return;
             } catch (CancelledKeyException e) {
                 if (!selected) {
@@ -392,7 +397,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doBeginRead() throws Exception {
+    protected void doBeginRead() throws Exception {//NioServerSocketChannel在这里完成注册接受连接事件（OP_ACCEPT）到selector 上
         // Channel.read() or ChannelHandlerContext.read() was called
         final SelectionKey selectionKey = this.selectionKey;
         if (!selectionKey.isValid()) {
@@ -400,11 +405,11 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         }
 
         readPending = true;
-
+        //jdk事件类型。OP_READ = 1 << 0；OP_WRITE = 1 << 2;OP_CONNECT = 1 << 3;OP_ACCEPT = 1 << 4;
         final int interestOps = selectionKey.interestOps();
         //假设之前没有监听readInterestOp，则监听readInterestOp
-        if ((interestOps & readInterestOp) == 0) {
-            //NioServerSocketChannel: readInterestOp = OP_ACCEPT = 1 << 4 = 16
+        if ((interestOps & readInterestOp) == 0) {//在前面注册了0，得到key，再注册16
+            //NioServerSocketChannel: readInterestOp = OP_ACCEPT = 1 << 4 = 16。  NioSocketChannel注册read事件
             logger.info("interest ops： " + readInterestOp);
             selectionKey.interestOps(interestOps | readInterestOp);
         }

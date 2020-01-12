@@ -19,14 +19,27 @@ import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * Handler implementation for the echo server.
  */
 @Sharable
 public class EchoServerHandler extends ChannelInboundHandlerAdapter {
+    @Override
+    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+        super.channelRegistered(ctx);
+        System.out.println("EchoServerHandler channelRegistered");
+    }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
+        try {
+            TimeUnit.SECONDS.sleep(5);
+            System.out.println("休息五秒当做业务处理");
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         ctx.write(msg);
     }
 
@@ -40,5 +53,18 @@ public class EchoServerHandler extends ChannelInboundHandlerAdapter {
         // Close the connection when an exception is raised.
         cause.printStackTrace();
         ctx.close();
+    }
+
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        super.handlerAdded(ctx);
+        System.out.println("添加 handlerAdded");
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        super.handlerRemoved(ctx);
+        System.out.println("删除 handlerRemoved");
     }
 }

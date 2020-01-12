@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Default implementation which uses simple round-robin to choose next {@link EventExecutor}.
  */
 @UnstableApi
-public final class DefaultEventExecutorChooserFactory implements EventExecutorChooserFactory {
+public final class DefaultEventExecutorChooserFactory implements EventExecutorChooserFactory {//这里提供个如何从boss线程组中选择一个
 
     public static final DefaultEventExecutorChooserFactory INSTANCE = new DefaultEventExecutorChooserFactory();
 

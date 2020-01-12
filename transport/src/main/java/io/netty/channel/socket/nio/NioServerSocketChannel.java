@@ -40,7 +40,7 @@ import java.util.Map;
 
 /**
  * A {@link io.netty.channel.socket.ServerSocketChannel} implementation which uses
- * NIO selector based implementation to accept new connections.
+ * NIO selector based implementation to accept new connections.    基于javanio的select模型封装
  */
 public class NioServerSocketChannel extends AbstractNioMessageChannel
                              implements io.netty.channel.socket.ServerSocketChannel {
@@ -65,12 +65,12 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
         }
     }
 
-    private final ServerSocketChannelConfig config;
+    private final ServerSocketChannelConfig config;//该 ServerSocketChannel对应的配置信息
 
     /**
      * Create a new instance
      */
-    public NioServerSocketChannel() {
+    public NioServerSocketChannel() {//通过工厂+反射，调用这个无参构造器实例化对象
         this(newSocket(DEFAULT_SELECTOR_PROVIDER));
     }
 
@@ -85,8 +85,9 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
      * Create a new instance using the given {@link ServerSocketChannel}.
      */
     public NioServerSocketChannel(ServerSocketChannel channel) {
-        super(null, channel, SelectionKey.OP_ACCEPT);
-        config = new NioServerSocketChannelConfig(this, javaChannel().socket());
+        super(null, channel, SelectionKey.OP_ACCEPT);//调用父类构造器，设置感兴趣的事件，链接事件
+        config = new NioServerSocketChannelConfig(this, javaChannel().socket());//内部配置类
+        logger.info("[ls] NioServerSocketChannel created");
     }
 
     @Override
@@ -127,7 +128,8 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
+    protected void doBind(SocketAddress localAddress) throws Exception {//绑定端口，下面根据jdk的版本使用不同的绑定端口NIO方式
+        logger.info("[ls] NioServerSocketChannel doBind javaChannel ");
         if (PlatformDependent.javaVersion() >= 7) {
             javaChannel().bind(localAddress, config.getBacklog());
         } else {
@@ -147,7 +149,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
 
         try {
             if (ch != null) {
-                buf.add(new NioSocketChannel(this, ch));
+                buf.add(new NioSocketChannel(this, ch));//这里创建一个NioSocketChannel
                 return 1;
             }
         } catch (Throwable t) {
@@ -195,7 +197,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
         throw new UnsupportedOperationException();
     }
 
-    private final class NioServerSocketChannelConfig extends DefaultServerSocketChannelConfig {
+    private final class NioServerSocketChannelConfig extends DefaultServerSocketChannelConfig {//内部匿名类
         private NioServerSocketChannelConfig(NioServerSocketChannel channel, ServerSocket javaSocket) {
             super(channel, javaSocket);
         }

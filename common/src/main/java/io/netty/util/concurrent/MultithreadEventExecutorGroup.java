@@ -30,8 +30,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public abstract class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
 
-    private final EventExecutor[] children;
-    private final Set<EventExecutor> readonlyChildren;
+    private final EventExecutor[] children;//NioEventLoop数组
+    private final Set<EventExecutor> readonlyChildren;//上面线程组的拷贝
     private final AtomicInteger terminatedChildren = new AtomicInteger();
     private final Promise<?> terminationFuture = new DefaultPromise(GlobalEventExecutor.INSTANCE);
     private final EventExecutorChooserFactory.EventExecutorChooser chooser;
@@ -71,17 +71,17 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
         if (nThreads <= 0) {
             throw new IllegalArgumentException(String.format("nThreads: %d (expected: > 0)", nThreads));
         }
-
+        //类名为线程工厂的名字。该线程池没有任何队列，提交任务后，创建线程，并且立即start。
         if (executor == null) {
             executor = new ThreadPerTaskExecutor(newDefaultThreadFactory());
         }
 
-        children = new EventExecutor[nThreads];
+        children = new EventExecutor[nThreads];// 创建一个事件执行组
 
         for (int i = 0; i < nThreads; i ++) {
             boolean success = false;
             try {
-                children[i] = newChild(executor, args);
+                children[i] = newChild(executor, args);//模板方法，在NioEventLoopGroup提供了基于select的实现.args第一个参数是SelectorProvider
                 success = true;
             } catch (Exception e) {
                 // TODO: Think about if this is a good exception type
@@ -108,7 +108,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
             }
         }
 
-        chooser = chooserFactory.newChooser(children);
+        chooser = chooserFactory.newChooser(children);//初始化的时候会创建选择策略选择器
 
         final FutureListener<Object> terminationListener = new FutureListener<Object>() {
             @Override
@@ -119,7 +119,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
             }
         };
 
-        for (EventExecutor e: children) {
+        for (EventExecutor e: children) {//给每个线程添加监听器
             e.terminationFuture().addListener(terminationListener);
         }
 

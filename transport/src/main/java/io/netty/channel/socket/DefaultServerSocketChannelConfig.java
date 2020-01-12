@@ -39,7 +39,7 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
                                               implements ServerSocketChannelConfig {
 
-    protected final ServerSocket javaSocket;
+    protected final ServerSocket javaSocket;//jdk的channel中对的socket
     private volatile int backlog = NetUtil.SOMAXCONN;
 
     /**

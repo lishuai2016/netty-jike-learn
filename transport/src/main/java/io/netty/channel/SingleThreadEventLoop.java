@@ -30,7 +30,7 @@ import java.util.concurrent.ThreadFactory;
  * Abstract base class for {@link EventLoop}s that execute all its submitted tasks in a single thread.
  *
  */
-public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor implements EventLoop {
+public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor implements EventLoop {//单线程执行基础类
 
     protected static final int DEFAULT_MAX_PENDING_TASKS = Math.max(16,
             SystemPropertyUtil.getInt("io.netty.eventLoop.maxPendingTasks", Integer.MAX_VALUE));
@@ -77,14 +77,14 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     }
 
     @Override
-    public ChannelFuture register(Channel channel) {
+    public ChannelFuture register(Channel channel) {//这里进行注册
         return register(new DefaultChannelPromise(channel, this));
     }
 
     @Override
     public ChannelFuture register(final ChannelPromise promise) {
         ObjectUtil.checkNotNull(promise, "promise");
-        promise.channel().unsafe().register(this, promise);
+        promise.channel().unsafe().register(this, promise);//server启动时，unsafe类型io.netty.channel.nio.AbstractNioMessageChannel.NioMessageUnsafe
         return promise;
     }
 

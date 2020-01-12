@@ -21,7 +21,7 @@ import io.netty.util.concurrent.FutureListener;
 import java.net.ConnectException;
 import java.net.SocketAddress;
 
-public interface ChannelOutboundInvoker {
+public interface ChannelOutboundInvoker {//调用ChannelOutboundHandler对应的方法
 
     /**
      * Request to bind to the given {@link SocketAddress} and notify the {@link ChannelFuture} once the operation

@@ -213,7 +213,7 @@ public interface ChannelHandler {
     @Documented
     @Target(ElementType.TYPE)
     @Retention(RetentionPolicy.RUNTIME)
-    @interface Sharable {
+    @interface Sharable {//是否可共享标记注解
         // no value
     }
 }

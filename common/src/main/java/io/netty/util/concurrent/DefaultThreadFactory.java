@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * A {@link ThreadFactory} implementation with a simple naming rule.
  */
-public class DefaultThreadFactory implements ThreadFactory {
+public class DefaultThreadFactory implements ThreadFactory {//netty默认的线程工厂
 
     private static final AtomicInteger poolId = new AtomicInteger();
 
@@ -104,7 +104,7 @@ public class DefaultThreadFactory implements ThreadFactory {
     }
 
     @Override
-    public Thread newThread(Runnable r) {
+    public Thread newThread(Runnable r) {//一般在这里创建线程
         Thread t = newThread(FastThreadLocalRunnable.wrap(r), prefix + nextId.incrementAndGet());
         try {
             if (t.isDaemon() != daemon) {
@@ -120,7 +120,7 @@ public class DefaultThreadFactory implements ThreadFactory {
         return t;
     }
 
-    protected Thread newThread(Runnable r, String name) {
+    protected Thread newThread(Runnable r, String name) {//创建的线程都是FastThreadLocalThread类型的线程
         return new FastThreadLocalThread(threadGroup, r, name);
     }
 }

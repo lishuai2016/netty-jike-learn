@@ -204,7 +204,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
      *   <li>{@link #register(EventLoop, ChannelPromise)}</li>
      *   <li>{@link #deregister(ChannelPromise)}</li>
      *   <li>{@link #voidPromise()}</li>
-     * </ul>
+     * </ul>按功能可以分为分配内存，Socket四元组信息，注册事件循环，绑定网卡端口，Socket的连接和关闭，Socket的读写，这些操作都是和jdk底层相关
      */
     interface Unsafe {
 
@@ -234,7 +234,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
 
         /**
          * Bind the {@link SocketAddress} to the {@link Channel} of the {@link ChannelPromise} and notify
-         * it once its done.
+         * it once its done. serversocketchannel和socketchannel都有实现
          */
         void bind(SocketAddress localAddress, ChannelPromise promise);
 
@@ -278,11 +278,11 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
         void beginRead();
 
         /**
-         * Schedules a write operation.
+         * Schedules a write operation. 这里只是把要写的数据放到内存中
          */
         void write(Object msg, ChannelPromise promise);
 
-        /**
+        /** 这里触发真正的写操作到jdk的channel
          * Flush out all write operations scheduled via {@link #write(Object, ChannelPromise)}.
          */
         void flush();

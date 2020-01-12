@@ -17,12 +17,7 @@ package io.netty.example.echo;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.UnpooledByteBufAllocator;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioChannelOption;
@@ -32,12 +27,15 @@ import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 /**
  * Echoes back any received data from a client.
  */
 public final class EchoServer {
 
+    static final InternalLogger logger = InternalLoggerFactory.getInstance(EchoServer.class);
     static final boolean SSL = System.getProperty("ssl") != null;
     static final int PORT = Integer.parseInt(System.getProperty("port", "8007"));
 
@@ -50,7 +48,6 @@ public final class EchoServer {
         } else {
             sslCtx = null;
         }
-
         // Configure the server.
         EventLoopGroup bossGroup = new NioEventLoopGroup();
         EventLoopGroup workerGroup = new NioEventLoopGroup();
@@ -78,10 +75,10 @@ public final class EchoServer {
                      p.addLast(serverHandler);
                  }
              });
-
+            logger.info("[ls] bind start");
             // Start the server.
             ChannelFuture f = b.bind(PORT).sync();
-
+            logger.info("[ls] bind end");
             // Wait until the server socket is closed.
             f.channel().closeFuture().sync();
         } finally {

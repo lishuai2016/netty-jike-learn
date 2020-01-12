@@ -32,10 +32,10 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Map;
 import java.util.WeakHashMap;
 
-final class ChannelHandlerMask {
+final class ChannelHandlerMask {//通过mask掩码来决定handler中的那个方法是否被调用
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelHandlerMask.class);
 
-    // Using to mask which methods must be called for a ChannelHandler.
+    // Using to mask which methods must be called for a ChannelHandler. 使用16位来标记handler中的全部方法，一个方法使用一个位来标记
     static final int MASK_EXCEPTION_CAUGHT = 1;
     static final int MASK_CHANNEL_REGISTERED = 1 << 1;
     static final int MASK_CHANNEL_UNREGISTERED = 1 << 2;
@@ -53,13 +53,14 @@ final class ChannelHandlerMask {
     static final int MASK_READ = 1 << 14;
     static final int MASK_WRITE = 1 << 15;
     static final int MASK_FLUSH = 1 << 16;
-
+    //标记为输入流
     private static final int MASK_ALL_INBOUND = MASK_EXCEPTION_CAUGHT | MASK_CHANNEL_REGISTERED |
             MASK_CHANNEL_UNREGISTERED | MASK_CHANNEL_ACTIVE | MASK_CHANNEL_INACTIVE | MASK_CHANNEL_READ |
             MASK_CHANNEL_READ_COMPLETE | MASK_USER_EVENT_TRIGGERED | MASK_CHANNEL_WRITABILITY_CHANGED;
+    //标记为输出流
     private static final int MASK_ALL_OUTBOUND = MASK_EXCEPTION_CAUGHT | MASK_BIND | MASK_CONNECT | MASK_DISCONNECT |
             MASK_CLOSE | MASK_DEREGISTER | MASK_READ | MASK_WRITE | MASK_FLUSH;
-
+    //记录一个handler类型和掩码
     private static final FastThreadLocal<Map<Class<? extends ChannelHandler>, Integer>> MASKS =
             new FastThreadLocal<Map<Class<? extends ChannelHandler>, Integer>>() {
                 @Override
@@ -71,13 +72,13 @@ final class ChannelHandlerMask {
     /**
      * Return the {@code executionMask}.
      */
-    static int mask(Class<? extends ChannelHandler> clazz) {
+    static int mask(Class<? extends ChannelHandler> clazz) {//先从本地缓存中查询类型的掩码，有的话直接返回；没有的话计算一下缓存起来；
         // Try to obtain the mask from the cache first. If this fails calculate it and put it in the cache for fast
         // lookup in the future.
         Map<Class<? extends ChannelHandler>, Integer> cache = MASKS.get();
         Integer mask = cache.get(clazz);
         if (mask == null) {
-            mask = mask0(clazz);
+            mask = mask0(clazz);//计算掩码
             cache.put(clazz, mask);
         }
         return mask;
@@ -89,11 +90,11 @@ final class ChannelHandlerMask {
     private static int mask0(Class<? extends ChannelHandler> handlerType) {
         int mask = MASK_EXCEPTION_CAUGHT;
         try {
-            if (ChannelInboundHandler.class.isAssignableFrom(handlerType)) {
-                mask |= MASK_ALL_INBOUND;
+            if (ChannelInboundHandler.class.isAssignableFrom(handlerType)) {//输入类型
+                mask |= MASK_ALL_INBOUND;//初始赋值全部方法，下面的更具方法是否添加Skip注解来判断是否去掉
 
                 if (isSkippable(handlerType, "channelRegistered", ChannelHandlerContext.class)) {
-                    mask &= ~MASK_CHANNEL_REGISTERED;
+                    mask &= ~MASK_CHANNEL_REGISTERED;//如果有方法添加了skip，通过把指定的位设置为0
                 }
                 if (isSkippable(handlerType, "channelUnregistered", ChannelHandlerContext.class)) {
                     mask &= ~MASK_CHANNEL_UNREGISTERED;
@@ -118,7 +119,7 @@ final class ChannelHandlerMask {
                 }
             }
 
-            if (ChannelOutboundHandler.class.isAssignableFrom(handlerType)) {
+            if (ChannelOutboundHandler.class.isAssignableFrom(handlerType)) {//输出类型
                 mask |= MASK_ALL_OUTBOUND;
 
                 if (isSkippable(handlerType, "bind", ChannelHandlerContext.class,

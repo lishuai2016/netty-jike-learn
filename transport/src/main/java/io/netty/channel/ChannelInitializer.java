@@ -68,7 +68,7 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
      *                      {@link #exceptionCaught(ChannelHandlerContext, Throwable)} which will by default close
      *                      the {@link Channel}.
      */
-    protected abstract void initChannel(C ch) throws Exception;
+    protected abstract void initChannel(C ch) throws Exception;//当注册channel的时候会调用这个方法，这个方法执行完毕后会把这个从pipeline中移除，如何实现？
 
     @Override
     @SuppressWarnings("unchecked")
@@ -124,9 +124,9 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
 
     @SuppressWarnings("unchecked")
     private boolean initChannel(ChannelHandlerContext ctx) throws Exception {
-        if (initMap.add(ctx)) { // Guard against re-entrance.
+        if (initMap.add(ctx)) { // Guard against re-entrance.避免重入
             try {
-                initChannel((C) ctx.channel());
+                initChannel((C) ctx.channel());//抽象的模板方法，让子类去实现
             } catch (Throwable cause) {
                 // Explicitly call exceptionCaught(...) as we removed the handler before calling initChannel(...).
                 // We do so to prevent multiple calls to initChannel(...).
@@ -134,7 +134,7 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
             } finally {
                 ChannelPipeline pipeline = ctx.pipeline();
                 if (pipeline.context(this) != null) {
-                    pipeline.remove(this);
+                    pipeline.remove(this);//移除这个初始化handler
                 }
             }
             return true;

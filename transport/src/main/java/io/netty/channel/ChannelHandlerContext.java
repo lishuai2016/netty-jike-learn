@@ -124,7 +124,7 @@ import java.nio.channels.Channels;
  */
 public interface ChannelHandlerContext extends AttributeMap, ChannelInboundInvoker, ChannelOutboundInvoker {
 
-    /**
+    /** 返回绑定到这个实例的channel
      * Return the {@link Channel} which is bound to the {@link ChannelHandlerContext}.
      */
     Channel channel();
@@ -154,32 +154,33 @@ public interface ChannelHandlerContext extends AttributeMap, ChannelInboundInvok
     boolean isRemoved();
 
     @Override
-    ChannelHandlerContext fireChannelRegistered();
+    ChannelHandlerContext fireChannelRegistered();//调用下一个ChannelInboundHandler对应的方法
 
     @Override
-    ChannelHandlerContext fireChannelUnregistered();
+    ChannelHandlerContext fireChannelUnregistered();//调用下一个ChannelInboundHandler对应的方法
 
     @Override
-    ChannelHandlerContext fireChannelActive();
+    ChannelHandlerContext fireChannelActive();//调用下一个ChannelInboundHandler对应的方法
 
     @Override
-    ChannelHandlerContext fireChannelInactive();
+    ChannelHandlerContext fireChannelInactive();//调用下一个ChannelInboundHandler对应的方法
 
     @Override
-    ChannelHandlerContext fireExceptionCaught(Throwable cause);
+    ChannelHandlerContext fireExceptionCaught(Throwable cause);//调用下一个ChannelInboundHandler对应的方法
 
     @Override
-    ChannelHandlerContext fireUserEventTriggered(Object evt);
+    ChannelHandlerContext fireUserEventTriggered(Object evt);//调用下一个ChannelInboundHandler对应的方法
 
     @Override
-    ChannelHandlerContext fireChannelRead(Object msg);
+    ChannelHandlerContext fireChannelRead(Object msg);//调用下一个ChannelInboundHandler对应的方法
 
     @Override
-    ChannelHandlerContext fireChannelReadComplete();
+    ChannelHandlerContext fireChannelReadComplete();//调用下一个ChannelInboundHandler对应的方法
 
     @Override
-    ChannelHandlerContext fireChannelWritabilityChanged();
-
+    ChannelHandlerContext fireChannelWritabilityChanged();//调用下一个ChannelInboundHandler对应的方法
+    //将数据从channel读取到第一个入站缓冲区；如果读取成功则触发channelread事件，并（在最后一个消息被读取完成后）
+    //通知ChannelInboundHandler的channelreadcomplete方法
     @Override
     ChannelHandlerContext read();
 
@@ -189,9 +190,9 @@ public interface ChannelHandlerContext extends AttributeMap, ChannelInboundInvok
     /**
      * Return the assigned {@link ChannelPipeline}
      */
-    ChannelPipeline pipeline();
+    ChannelPipeline pipeline();//返回这个实例所关联的pipeline
 
-    /**
+    /** 返回和这个实例相关联的channel所配置的ByteBufAllocator
      * Return the assigned {@link ByteBufAllocator} which will be used to allocate {@link ByteBuf}s.
      */
     ByteBufAllocator alloc();

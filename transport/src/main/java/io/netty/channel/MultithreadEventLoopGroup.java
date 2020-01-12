@@ -36,9 +36,16 @@ public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutor
 
     private static final int DEFAULT_EVENT_LOOP_THREADS;
 
+    /**
+     * 线程个数在何时达到最优
+     我们知道，在一个应用中，如果cpu计算的时间为Tcpu，io操作的时间为Tio，系统的cpu核数为Ncpu，线程个数为Nthread，
+     那么理论上线程个数满足Nthread = (1+Tio/Tcpu)*Ncpu，应用的性能达到最优.
+
+     如果线程个数设置为2倍的cpu线程个数，那么Tio/Tcpu的值就是1，也就是说在netty的nio线程中，cpu时间和io时间相等.在NioEventLoop中的run分配时间
+     */
     static {
         DEFAULT_EVENT_LOOP_THREADS = Math.max(1, SystemPropertyUtil.getInt(
-                "io.netty.eventLoopThreads", NettyRuntime.availableProcessors() * 2));
+                "io.netty.eventLoopThreads", NettyRuntime.availableProcessors() * 2));//取当前CPU的2倍
 
         if (logger.isDebugEnabled()) {
             logger.debug("-Dio.netty.eventLoopThreads: {}", DEFAULT_EVENT_LOOP_THREADS);
@@ -69,7 +76,7 @@ public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutor
     }
 
     @Override
-    protected ThreadFactory newDefaultThreadFactory() {
+    protected ThreadFactory newDefaultThreadFactory() {//指定线程工厂
         return new DefaultThreadFactory(getClass(), Thread.MAX_PRIORITY);
     }
 
@@ -82,8 +89,8 @@ public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutor
     protected abstract EventLoop newChild(Executor executor, Object... args) throws Exception;
 
     @Override
-    public ChannelFuture register(Channel channel) {
-        return next().register(channel);
+    public ChannelFuture register(Channel channel) {//注册channel
+        return next().register(channel);//调用SingleThreadEventLoop实现。这里的next()从boss中选择一个NioEventLoop
     }
 
     @Override

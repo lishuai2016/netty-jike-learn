@@ -40,13 +40,14 @@ public class EchoClientHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void channelActive(ChannelHandlerContext ctx) {
+    public void channelActive(ChannelHandlerContext ctx) {//信道激活的时候触发写数据
         ctx.writeAndFlush(firstMessage);
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        ctx.write(msg);
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {//读取返回值
+        System.out.println("获取服务端的返回值："+msg);
+        //ctx.write(msg);
     }
 
     @Override

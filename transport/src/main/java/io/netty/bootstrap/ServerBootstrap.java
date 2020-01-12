@@ -49,7 +49,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
     private final Map<AttributeKey<?>, Object> childAttrs = new ConcurrentHashMap<AttributeKey<?>, Object>();
     private final ServerBootstrapConfig config = new ServerBootstrapConfig(this);
     private volatile EventLoopGroup childGroup;
-    private volatile ChannelHandler childHandler;
+    private volatile ChannelHandler childHandler;//这个handler 将会在每个客户端连接的时候调用。供 SocketChannel 使用
 
     public ServerBootstrap() { }
 
@@ -122,21 +122,22 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
     }
 
     @Override
-    void init(Channel channel) {
+    void init(Channel channel) {//定义在AbstractBootstrap中的抽象钩子函数，完成channel的初始化
+        logger.info("执行channel初始化 init()");
         setChannelOptions(channel, options0().entrySet().toArray(newOptionArray(0)), logger);
         setAttributes(channel, attrs0().entrySet().toArray(newAttrArray(0)));
 
         ChannelPipeline p = channel.pipeline();
 
         final EventLoopGroup currentChildGroup = childGroup;
-        final ChannelHandler currentChildHandler = childHandler;
+        final ChannelHandler currentChildHandler = childHandler;//设置的自己处理器
         final Entry<ChannelOption<?>, Object>[] currentChildOptions =
                 childOptions.entrySet().toArray(newOptionArray(0));
         final Entry<AttributeKey<?>, Object>[] currentChildAttrs = childAttrs.entrySet().toArray(newAttrArray(0));
         //ChannelInitializer一次性、初始化handler:
         //负责添加一个ServerBootstrapAcceptor handler，添加完后，自己就移除了:
         //ServerBootstrapAcceptor handler： 负责接收客户端连接创建连接后，对连接的初始化工作。
-        p.addLast(new ChannelInitializer<Channel>() {
+        p.addLast(new ChannelInitializer<Channel>() {//这里触发一次添加handler操作。匿名类。io.netty.bootstrap.ServerBootstrap$1
             @Override
             public void initChannel(final Channel ch) {
                 final ChannelPipeline pipeline = ch.pipeline();
@@ -145,7 +146,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                     pipeline.addLast(handler);
                 }
 
-                ch.eventLoop().execute(new Runnable() {
+                ch.eventLoop().execute(new Runnable() {//这里异步触发一次添加handler操作。io.netty.bootstrap.ServerBootstrap$ServerBootstrapAcceptor
                     @Override
                     public void run() {
                         pipeline.addLast(new ServerBootstrapAcceptor(

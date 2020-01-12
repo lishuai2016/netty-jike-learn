@@ -62,7 +62,7 @@ import java.util.Map;
  * example, you can configure the parameters which are specific to a TCP/IP
  * socket as explained in {@link SocketChannelConfig}.
  */
-public interface ChannelConfig {
+public interface ChannelConfig {//channel配置信息抽象接口
 
     /**
      * Return all set {@link ChannelOption}'s.

@@ -42,7 +42,7 @@ public abstract class ChannelHandlerAdapter implements ChannelHandler {
      * Return {@code true} if the implementation is {@link Sharable} and so can be added
      * to different {@link ChannelPipeline}s.
      */
-    public boolean isSharable() {
+    public boolean isSharable() {//这里定义了一个handler是否被认为可共享的。通过注解Sharable来实现
         /**
          * Cache the result of {@link Sharable} annotation detection to workaround a condition. We use a
          * {@link ThreadLocal} and {@link WeakHashMap} to eliminate the volatile write/reads. Using different

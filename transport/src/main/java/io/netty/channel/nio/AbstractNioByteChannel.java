@@ -63,7 +63,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
      * @param ch                the underlying {@link SelectableChannel} on which it operates
      */
     protected AbstractNioByteChannel(Channel parent, SelectableChannel ch) {
-        super(parent, ch, SelectionKey.OP_READ);
+        super(parent, ch, SelectionKey.OP_READ);//这里设置读事件
     }
 
     /**
@@ -94,7 +94,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 ((SocketChannelConfig) config).isAllowHalfClosure();
     }
 
-    protected class NioByteUnsafe extends AbstractNioUnsafe {
+    protected class NioByteUnsafe extends AbstractNioUnsafe {//核心内部类
 
         private void closeOnRead(ChannelPipeline pipeline) {
             //input关闭了么？没有
@@ -130,8 +130,15 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             }
         }
 
+        /**
+         这里做三件事：
+         1、拿到Channel的config之后拿到ByteBuf分配器，用分配器来分配一个ByteBuf，
+         ByteBuf是netty里面的字节数据载体，后面读取的数据都读到这个对象里面
+         2、将Channel中的数据读取到ByteBuf
+         3、数据读完之后，调用 pipeline.fireChannelRead(byteBuf); 从head节点开始传播至整个pipeline
+         */
         @Override
-        public final void read() {
+        public final void read() {//读取数据
             final ChannelConfig config = config();
             if (shouldBreakReadReady(config)) {
                 clearReadPending();
@@ -150,7 +157,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     //尽可能分配合适的大小：guess
                     byteBuf = allocHandle.allocate(allocator);
                     //读并且记录读了多少，如果读满了，下次continue的话就直接扩容。
-                    allocHandle.lastBytesRead(doReadBytes(byteBuf));
+                    allocHandle.lastBytesRead(doReadBytes(byteBuf));//doReadBytes(byteBuf)  从Channel 接受数据到byte buffer
                     if (allocHandle.lastBytesRead() <= 0) {
                         // nothing was read. release the buffer.
                         byteBuf.release();
@@ -165,15 +172,15 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
                     allocHandle.incMessagesRead(1);
                     readPending = false;
-                    //pipeline上执行，业务逻辑的处理就在这个地方
-                    pipeline.fireChannelRead(byteBuf);
+                    //pipeline上执行，业务逻辑的处理就在这个地方.触发pipeline.fireChannelRead(byteBuf) 把读取到的数据传播出去.【一次读数据完成，一次读事件处理可能会包含多次读数据操作】
+                    pipeline.fireChannelRead(byteBuf);//[ls]重要：触发直接编写业务handler中的channelRead方法. 触发事件，将会引发pipeline的读事件传播
                     byteBuf = null;
                 } while (allocHandle.continueReading());
 
                 //记录这次读事件总共读了多少数据，计算下次分配大小。
                 allocHandle.readComplete();
                 //相当于完成本次读事件的处理
-                pipeline.fireChannelReadComplete();
+                pipeline.fireChannelReadComplete();//[ls]重要：触发直接编写业务handler中的channelReadComplete方法【一次读事件处理完成】
 
                 if (close) {
                     closeOnRead(pipeline);

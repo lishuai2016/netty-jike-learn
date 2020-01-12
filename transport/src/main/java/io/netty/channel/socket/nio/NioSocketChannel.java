@@ -51,7 +51,7 @@ import java.util.concurrent.Executor;
 import static io.netty.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD;
 
 /**
- * {@link io.netty.channel.socket.SocketChannel} which uses NIO selector based implementation.
+ * {@link io.netty.channel.socket.SocketChannel} which uses NIO selector based implementation.  一般client端设置的channel类型
  */
 public class NioSocketChannel extends AbstractNioByteChannel implements io.netty.channel.socket.SocketChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioSocketChannel.class);
@@ -103,6 +103,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     public NioSocketChannel(Channel parent, SocketChannel socket) {
         super(parent, socket);
         config = new NioSocketChannelConfig(this, socket.socket());
+        logger.info("[ls] NioSocketChannel created");
     }
 
     @Override
@@ -294,6 +295,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     private void doBind0(SocketAddress localAddress) throws Exception {
+        logger.info("[ls]NioSocketChannel绑定端口");//这里什么情况下被调用？？？
         if (PlatformDependent.javaVersion() >= 7) {
             SocketUtils.bind(javaChannel(), localAddress);
         } else {
@@ -302,13 +304,13 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {//建立链接
         if (localAddress != null) {
             doBind0(localAddress);
         }
 
         boolean success = false;
-        try {
+        try { logger.info("[ls] 建立socket链接 链接失败注册注册OP_CONNECT事件");
             boolean connected = SocketUtils.connect(javaChannel(), remoteAddress);
             if (!connected) {
                 selectionKey().interestOps(SelectionKey.OP_CONNECT);
@@ -341,14 +343,14 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    protected int doReadBytes(ByteBuf byteBuf) throws Exception {
+    protected int doReadBytes(ByteBuf byteBuf) throws Exception {//从jdk Channel 接受数据到byte buffer
         final RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
         allocHandle.attemptedBytesRead(byteBuf.writableBytes());
         return byteBuf.writeBytes(javaChannel(), allocHandle.attemptedBytesRead());
     }
 
     @Override
-    protected int doWriteBytes(ByteBuf buf) throws Exception {
+    protected int doWriteBytes(ByteBuf buf) throws Exception {//
         final int expectedWrittenBytes = buf.readableBytes();
         return buf.readBytes(javaChannel(), expectedWrittenBytes);
     }
@@ -397,7 +399,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             // Always us nioBuffers() to workaround data-corruption.
             // See https://github.com/netty/netty/issues/2761
             switch (nioBufferCnt) {
-                case 0:
+                case 0: logger.info("[ls] 调用doWrite0");
                     // We have something else beside ByteBuffers to write so fallback to normal writes.
                     writeSpinCount -= doWrite0(in);
                     break;
@@ -406,8 +408,8 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                     // Zero length buffers are not added to nioBuffers by ChannelOutboundBuffer, so there is no need
                     // to check if the total size of all the buffers is non-zero.
                     ByteBuffer buffer = nioBuffers[0];
-                    int attemptedBytes = buffer.remaining();
-                    final int localWrittenBytes = ch.write(buffer);
+                    int attemptedBytes = buffer.remaining();logger.info("[ls] 调用ch.write(buffer),把数据写入到jdk的channel中");
+                    final int localWrittenBytes = ch.write(buffer);//这里写jdk的channel。日志显示都是走这里，什么情况会走case 0?
                     if (localWrittenBytes <= 0) {
                         incompleteWrite(true);
                         return;
@@ -444,7 +446,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    protected AbstractNioUnsafe newUnsafe() {
+    protected AbstractNioUnsafe newUnsafe() {//父类的钩子函数
         return new NioSocketChannelUnsafe();
     }
 

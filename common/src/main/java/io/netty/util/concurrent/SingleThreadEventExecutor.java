@@ -79,13 +79,17 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private static final AtomicReferenceFieldUpdater<SingleThreadEventExecutor, ThreadProperties> PROPERTIES_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(
                     SingleThreadEventExecutor.class, ThreadProperties.class, "threadProperties");
-
+    /**
+     我们发现 taskQueue在NioEventLoop中默认是mpsc队列，mpsc队列，即多生产者单消费者队列，netty使用mpsc，
+     方便的将外部线程的task聚集，在reactor线程内部用单线程来串行执行，
+     我们可以借鉴netty的任务执行模式来处理类似多线程数据上报，定时聚合的应用
+     */
     private final Queue<Runnable> taskQueue;
 
-    private volatile Thread thread;
+    private volatile Thread thread;//这里绑定了一个线程
     @SuppressWarnings("unused")
     private volatile ThreadProperties threadProperties;
-    private final Executor executor;
+    private final Executor executor;//executor = new ThreadPerTaskExecutor(newDefaultThreadFactory());
     private volatile boolean interrupted;
 
     private final CountDownLatch threadLock = new CountDownLatch(1);
@@ -163,7 +167,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         this.addTaskWakesUp = addTaskWakesUp;
         this.maxPendingTasks = Math.max(16, maxPendingTasks);
         this.executor = ThreadExecutorMap.apply(executor, this);
-        taskQueue = newTaskQueue(this.maxPendingTasks);
+        taskQueue = newTaskQueue(this.maxPendingTasks);//任务队列
         rejectedExecutionHandler = ObjectUtil.checkNotNull(rejectedHandler, "rejectedHandler");
     }
 
@@ -405,7 +409,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      *
      * @return {@code true} if and only if at least one task was run
      */
-    protected boolean runAllTasks() {
+    protected boolean runAllTasks() {//参考：https://www.jianshu.com/p/58fad8e42379
         assert inEventLoop();
         boolean fetchedAll;
         boolean ranAtLeastOne = false;
@@ -495,8 +499,10 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     /**
      * Poll all tasks from the task queue and run them via {@link Runnable#run()} method.  This method stops running
      * the tasks in the task queue and returns if it ran longer than {@code timeoutNanos}.
+     * 为什么要传递这个参数？netty的目的是应用的性能达到最高，netty默认情况下开启了两倍cpu核数个线程，
+     * 必须保证cpu时间和io时间相等，也就是Tio ＝ Tcpu，即ioTime = ioTime * (100 - ioRatio) / ioRatio)
      */
-    protected boolean runAllTasks(long timeoutNanos) {
+    protected boolean runAllTasks(long timeoutNanos) {//timeoutNanos含义为在这里运行的时长。
         fetchFromScheduledTaskQueue();
         Runnable task = pollTask();
         if (task == null) {
@@ -875,16 +881,16 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
         return isTerminated();
     }
-
+    //jdk中定义的接口。java.util.concurrent.Executor.execute()
     @Override
-    public void execute(Runnable task) {
+    public void execute(Runnable task) {//在这里对线程进行设置。第一次提交任务的时候，开启EventLoop线程。
         if (task == null) {
             throw new NullPointerException("task");
         }
-
+        logger.info("[ls] reactor 线程的启动");
         boolean inEventLoop = inEventLoop();
-        addTask(task);
-        if (!inEventLoop) {
+        addTask(task);//把任务添加到队列.taskQueue
+        if (!inEventLoop) {//没有开启，进行启动，只会执行一次
             startThread();
             if (isShutdown()) {
                 boolean reject = false;
@@ -904,7 +910,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         }
 
         if (!addTaskWakesUp && wakesUpForTask(task)) {
-            wakeup(inEventLoop);
+            wakeup(inEventLoop);//调用wakeup方法唤醒selector阻塞
         }
     }
 
@@ -1000,7 +1006,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     private static final long SCHEDULE_PURGE_INTERVAL = TimeUnit.SECONDS.toNanos(1);
 
-    private void startThread() {
+    private void startThread() {//判断没有被启动进行启动
         if (state == ST_NOT_STARTED) {
             if (STATE_UPDATER.compareAndSet(this, ST_NOT_STARTED, ST_STARTED)) {
                 boolean success = false;
@@ -1034,12 +1040,13 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         return false;
     }
 
-    private void doStartThread() {
-        assert thread == null;
+    private void doStartThread() {//这里对nio EventLoop进行设置线程绑定
+        assert thread == null;//保证只执行一次。所以executor线程池中只会有一个线程
         executor.execute(new Runnable() {
             @Override
             public void run() {
                 thread = Thread.currentThread();
+                logger.info("[ls] eventLoop线程开始执行");
                 if (interrupted) {
                     thread.interrupt();
                 }
@@ -1047,7 +1054,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 boolean success = false;
                 updateLastExecutionTime();
                 try {
-                    SingleThreadEventExecutor.this.run();
+                    SingleThreadEventExecutor.this.run();//运行死循环程序。将调用NioEventLoop的run方法的过程封装成一个runnable塞到一个线程中去执行
                     success = true;
                 } catch (Throwable t) {
                     logger.warn("Unexpected exception from an event executor: ", t);
